@@ -6,7 +6,13 @@ Jeu de combat 1v1 en 3D low poly, à mains nues, jouable dans le navigateur (Thr
 
 ## Statut
 
-Prototype : **démo CPU vs CPU**. Deux IA (Kai et Brick), modèles riggés animés, s'affrontent en boucle, avec coups, garde, jauge de garde, combos, rounds et HUD. Prochaine étape : M1 (clavier et manette).
+Prototype jouable dans le navigateur, avec trois écrans :
+
+- **Menu** (`#`)
+- **Combat IA** (`#fight`) : Kai contre Brick, pilotés par l'ordinateur, avec coups, garde, jauge de garde, combos, rounds et HUD.
+- **Galerie d'animations** (`#gallery/<perso>/<animation>`, ex. `#gallery/kai/hk`) : lecture image par image, vitesse réglable, phases des coups, mannequin cible à la portée du coup. L'identifiant affiché (ex. `kai/hk`) sert à demander une retouche précise.
+
+Prochaine étape : M1 (clavier et manette).
 
 ## Développement
 

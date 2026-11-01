@@ -13,15 +13,17 @@ const POOL_SIZE = 120;
 /** Étincelles d'impact (pool réutilisé, aucune allocation en combat). */
 export class Sparks {
   private readonly pool: Spark[] = [];
+  private readonly group = new THREE.Group();
   private cursor = 0;
 
-  constructor(scene: THREE.Scene) {
+  constructor(private readonly scene: THREE.Scene) {
+    scene.add(this.group);
     const geometry = new THREE.TetrahedronGeometry(0.05, 0);
     for (let i = 0; i < POOL_SIZE; i++) {
       const material = new THREE.MeshBasicMaterial({ color: '#fff', transparent: true });
       const mesh = new THREE.Mesh(geometry, material);
       mesh.visible = false;
-      scene.add(mesh);
+      this.group.add(mesh);
       this.pool.push({ mesh, velocity: new THREE.Vector3(), life: 0, maxLife: 1 });
     }
   }
@@ -49,6 +51,10 @@ export class Sparks {
       );
       spark.maxLife = spark.life = 0.25 + Math.random() * 0.25;
     }
+  }
+
+  dispose(): void {
+    this.scene.remove(this.group);
   }
 
   update(dt: number): void {

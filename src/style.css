@@ -14,37 +14,9 @@ body {
   height: 100%;
 }
 
-#hud {
-  position: fixed;
-  top: 12px;
-  left: 16px;
-  display: flex;
-  gap: 12px;
-  align-items: baseline;
-  color: #fff;
-  text-shadow: 0 1px 3px #000a;
-  pointer-events: none;
-}
-
-#hud .title {
-  font-weight: 900;
-  letter-spacing: 0.08em;
-}
-
-#hud .build,
-#hud #fps {
-  font-size: 12px;
-  opacity: 0.7;
-}
-
-#hud {
-  top: auto;
-  bottom: 12px;
-}
-
 /* --- Interface de combat ------------------------------------------------ */
 
-#fight-hud {
+.fight-hud {
   position: fixed;
   inset: 0;
   pointer-events: none;
@@ -54,14 +26,14 @@ body {
   text-shadow: 0 2px 4px #000a;
 }
 
-#fight-hud .bars {
+.fight-hud .bars {
   display: flex;
   align-items: flex-start;
   gap: 16px;
   padding: 16px max(16px, 3vw) 0;
 }
 
-#fight-hud .side {
+.fight-hud .side {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -69,17 +41,17 @@ body {
   min-width: 0;
 }
 
-#fight-hud .side-1 {
+.fight-hud .side-1 {
   align-items: flex-end;
 }
 
-#fight-hud .name {
+.fight-hud .name {
   font-size: clamp(14px, 2vw, 20px);
   letter-spacing: 0.1em;
 }
 
-#fight-hud .hp,
-#fight-hud .guard {
+.fight-hud .hp,
+.fight-hud .guard {
   position: relative;
   width: 100%;
   background: #0008;
@@ -89,58 +61,58 @@ body {
   transform: skewX(-15deg);
 }
 
-#fight-hud .side-1 .hp,
-#fight-hud .side-1 .guard {
+.fight-hud .side-1 .hp,
+.fight-hud .side-1 .guard {
   transform: skewX(15deg);
 }
 
-#fight-hud .hp {
+.fight-hud .hp {
   height: clamp(14px, 2.4vw, 24px);
 }
 
-#fight-hud .guard {
+.fight-hud .guard {
   width: 70%;
   height: 7px;
   border-width: 1px;
 }
 
-#fight-hud .fill,
-#fight-hud .trail {
+.fight-hud .fill,
+.fight-hud .trail {
   position: absolute;
   top: 0;
   bottom: 0;
   left: 0;
 }
 
-#fight-hud .side-1 .fill,
-#fight-hud .side-1 .trail {
+.fight-hud .side-1 .fill,
+.fight-hud .side-1 .trail {
   left: auto;
   right: 0;
 }
 
-#fight-hud .hp .fill {
+.fight-hud .hp .fill {
   background: linear-gradient(#ffe46b, #f0a020);
 }
 
-#fight-hud .hp .trail {
+.fight-hud .hp .trail {
   background: #e3342f;
 }
 
-#fight-hud .guard .fill {
+.fight-hud .guard .fill {
   background: #6fb6ff;
 }
 
-#fight-hud .guard .fill.low {
+.fight-hud .guard .fill.low {
   animation: blink 0.25s steps(2) infinite;
   background: #ff6f6f;
 }
 
-#fight-hud .pips {
+.fight-hud .pips {
   display: flex;
   gap: 6px;
 }
 
-#fight-hud .pips span {
+.fight-hud .pips span {
   width: 12px;
   height: 12px;
   border: 2px solid #fff;
@@ -148,29 +120,29 @@ body {
   background: #0006;
 }
 
-#fight-hud .pips span.won {
+.fight-hud .pips span.won {
   background: #ffd23f;
 }
 
-#fight-hud .timer {
+.fight-hud .timer {
   font-size: clamp(28px, 5vw, 48px);
   min-width: 2ch;
   text-align: center;
   line-height: 1;
 }
 
-#fight-hud .combo {
+.fight-hud .combo {
   margin-top: 12vh;
   font-size: clamp(20px, 3.5vw, 36px);
   color: #ffd23f;
   font-style: italic;
 }
 
-#fight-hud .combo.pop {
+.fight-hud .combo.pop {
   animation: pop 0.2s ease-out;
 }
 
-#fight-hud .banner {
+.fight-hud .banner {
   position: absolute;
   top: 38%;
   left: 0;
@@ -186,24 +158,24 @@ body {
     transform 0.15s;
 }
 
-#fight-hud .banner.visible {
+.fight-hud .banner.visible {
   opacity: 1;
   transform: scale(1);
 }
 
-#fight-hud .banner.big {
+.fight-hud .banner.big {
   font-size: clamp(44px, 10vw, 110px);
   color: #ffd23f;
   -webkit-text-stroke: 2px #7a2a10;
 }
 
-#fight-hud .banner.small {
+.fight-hud .banner.small {
   top: 55%;
   font-size: clamp(20px, 3.5vw, 36px);
   color: #9fd8ff;
 }
 
-#fight-hud .mode {
+.fight-hud .mode {
   position: absolute;
   bottom: 12px;
   right: 16px;
@@ -232,4 +204,366 @@ body {
   color: #fff;
   font-weight: 700;
   letter-spacing: 0.1em;
+}
+
+#fps {
+  position: fixed;
+  top: 4px;
+  right: 8px;
+  color: #fff;
+  font-size: 11px;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* --- Couche d'interface des écrans --------------------------------------- */
+
+#ui {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  color: #fff;
+}
+
+#ui button,
+#ui select,
+#ui input,
+#ui aside,
+#ui .g-bar {
+  pointer-events: auto;
+}
+
+#ui button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.back-button {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  padding: 8px 14px;
+  border: 1px solid #fff6;
+  border-radius: 6px;
+  background: #0007;
+  font-weight: 700;
+}
+
+.back-button:hover {
+  background: #000a;
+}
+
+/* --- Menu --------------------------------------------------------------- */
+
+.menu {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  padding: 16px;
+  background: radial-gradient(ellipse at center, #0000 30%, #0009 100%);
+  text-shadow: 0 3px 8px #000a;
+}
+
+.menu h1 {
+  margin: 0;
+  font-size: clamp(48px, 11vw, 120px);
+  font-weight: 900;
+  font-style: italic;
+  line-height: 0.9;
+  letter-spacing: 0.02em;
+  text-align: center;
+  color: #ffd23f;
+  -webkit-text-stroke: 2px #7a2a10;
+}
+
+.menu h1 span {
+  display: block;
+  color: #fff;
+  -webkit-text-stroke: 2px #2a1030;
+}
+
+.menu nav {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(420px, 100%);
+}
+
+.menu nav button {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 20px;
+  border: 2px solid #fff4;
+  border-radius: 10px;
+  background: #0008;
+  text-align: left;
+  transition:
+    transform 0.1s,
+    border-color 0.1s;
+}
+
+.menu nav button strong {
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+
+.menu nav button small {
+  font-size: 13px;
+  opacity: 0.75;
+}
+
+.menu nav button.selected {
+  border-color: #ffd23f;
+  background: #000b;
+  transform: scale(1.04);
+}
+
+.menu-help {
+  margin: 0;
+  font-size: 13px;
+  opacity: 0.7;
+}
+
+/* --- Galerie ------------------------------------------------------------- */
+
+.gallery {
+  position: absolute;
+  inset: 0;
+  font-size: 14px;
+}
+
+.g-list {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  bottom: 140px;
+  width: 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 10px;
+  background: #000a;
+  overflow: hidden;
+}
+
+.g-chars {
+  display: flex;
+  gap: 6px;
+}
+
+.g-chars button {
+  flex: 1;
+  padding: 6px;
+  border: 1px solid #fff4;
+  border-radius: 6px;
+  background: transparent;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.g-chars button.selected {
+  background: #ffd23f;
+  color: #2a1030;
+  border-color: #ffd23f;
+}
+
+.g-entries {
+  overflow-y: auto;
+}
+
+.g-entries h3 {
+  margin: 10px 4px 4px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  opacity: 0.6;
+}
+
+.g-entries button {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  text-align: left;
+}
+
+.g-entries button:hover {
+  background: #fff1;
+}
+
+.g-entries button.selected {
+  background: #fff2;
+  box-shadow: inset 3px 0 #ffd23f;
+}
+
+.g-entries code,
+.g-id {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 11px;
+  color: #ffd23f;
+}
+
+.g-info {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 240px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #000a;
+}
+
+.g-info h2 {
+  margin: 4px 0 8px;
+  font-size: 18px;
+}
+
+.g-id {
+  font-size: 13px;
+  user-select: all;
+  pointer-events: auto;
+}
+
+.g-phase {
+  display: inline-block;
+  margin-bottom: 8px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.g-info dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 12px;
+  margin: 0;
+  font-size: 13px;
+}
+
+.g-info dt {
+  opacity: 0.7;
+}
+
+.g-info dd {
+  margin: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.g-bar {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #000a;
+}
+
+.g-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.g-controls button {
+  min-width: 34px;
+  padding: 5px 8px;
+  border: 1px solid #fff4;
+  border-radius: 6px;
+  background: transparent;
+}
+
+.g-controls button:hover {
+  background: #fff2;
+}
+
+.g-controls .g-play {
+  background: #ffd23f;
+  color: #2a1030;
+  border-color: #ffd23f;
+}
+
+.g-frame {
+  min-width: 110px;
+  font-variant-numeric: tabular-nums;
+}
+
+.g-controls select {
+  margin-left: 4px;
+}
+
+.g-views {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.g-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Frise des phases du coup, alignée sous le curseur. */
+.g-phases {
+  position: relative;
+  order: 2;
+  height: 6px;
+  margin: 0 8px;
+  border-radius: 3px;
+  background: #fff2;
+  overflow: hidden;
+}
+
+.g-phases span {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+}
+
+.g-scrub {
+  width: 100%;
+  margin: 0;
+  background: transparent;
+  accent-color: #ffd23f;
+}
+
+@media (max-width: 720px) {
+  .g-list {
+    right: 16px;
+    bottom: auto;
+    width: auto;
+    max-height: 30vh;
+  }
+
+  .g-info {
+    top: auto;
+    bottom: 200px;
+    left: 16px;
+    right: auto;
+    width: auto;
+  }
+
+  .g-views {
+    margin-left: 0;
+  }
 }
