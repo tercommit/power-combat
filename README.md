@@ -6,7 +6,7 @@ Jeu de combat 1v1 en 3D low poly, à mains nues, jouable dans le navigateur (Thr
 
 ## Statut
 
-Jalon **M0 (socle)** : scène, boucle à pas fixe, caméra latérale, déploiement GitHub Pages.
+Prototype : **démo CPU vs CPU**. Deux IA (Kai et Brick) s'affrontent en boucle, avec coups, garde, jauge de garde, combos, rounds et HUD. Prochaine étape : M1 (clavier et manette).
 
 ## Développement
 

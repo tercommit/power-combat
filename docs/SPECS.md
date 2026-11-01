@@ -38,6 +38,7 @@ La V1 est un **prototype jouable** (vertical slice).
 | ---------------------------- | --- | ---------------------------------------------------------------------------------------- |
 | **Joueur vs CPU**            | ✅  | Mode principal, avec 3 niveaux de difficulté pour l'IA                                   |
 | **Joueur vs Joueur (local)** | ✅  | 2 manettes, ou clavier contre manette                                                    |
+| **Démo CPU vs CPU**          | ✅  | Deux IA s'affrontent en boucle (écran titre / mode spectateur)                           |
 | **Entraînement**             | ✅  | Mannequin configurable (immobile, garde, saut), affichage des hitboxes et des frame data |
 
 ## 4. Caméra et espace de jeu
