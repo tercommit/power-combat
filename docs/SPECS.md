@@ -1,180 +1,261 @@
-# Spécifications : V1, prototype de combat low poly (web)
+# Spécifications : V1, jeu de combat 1v1 low poly (web)
 
-> Statut : **brouillon v0.1**, à valider avant de commencer le code.
+> Statut : **v0.2**. Décisions validées : combat 1v1, à mains nues, support manette, hébergement GitHub Pages.
 > Date : 2026-11-01
 
 ## 1. Vision
 
-Un jeu d'action 3D **low poly** jouable dans le navigateur, centré sur le **ressenti du combat** :
-des coups qui ont de l'impact, des animations fluides et des contrôles réactifs.
-La V1 est un **prototype jouable** (vertical slice), pas un jeu complet.
+Un **jeu de combat 1v1** en 3D **low poly**, jouable dans le navigateur, façon Tekken ou Street Fighter en version simplifiée.
+Les combattants s'affrontent **à mains nues** (arts martiaux, boxe, kicks).
+La priorité absolue est le **ressenti** : des coups qui ont de l'impact, des animations fluides et des contrôles précis.
+La V1 est un **prototype jouable** (vertical slice).
 
-**Pitch :** une arène, un héros, des vagues d'ennemis. On frappe, on esquive, on survit.
+**Pitch :** deux combattants, une arène, 3 rounds. Le premier à 2 victoires gagne.
 
 ## 2. Objectifs de la V1
 
 | # | Objectif | Critère de réussite |
 |---|----------|---------------------|
 | O1 | Combat qui « se sent bien » | Hit-stop, recul, screen shake et particules à chaque impact |
-| O2 | Contrôles réactifs | Délai entrée → animation < 100 ms, possibilité d'annuler une attaque par l'esquive |
-| O3 | Performance web | 60 FPS sur un laptop récent, chargement initial < 10 Mo |
-| O4 | Boucle de jeu complète | Menu → combat → victoire ou défaite → rejouer |
+| O2 | Contrôles précis | Délai entrée → action ≤ 3 frames (50 ms), buffer d'entrées, aucune entrée perdue |
+| O3 | Manette de première classe | Jouable entièrement à la manette, menus compris |
+| O4 | Performance web | 60 FPS stables sur un laptop récent, chargement initial < 10 Mo |
+| O5 | Boucle complète | Titre → sélection → combat (meilleur des 3) → résultat → rejouer |
+| O6 | En ligne | Build déployé automatiquement sur GitHub Pages |
 
 ### Hors périmètre (V1)
-- Multijoueur en ligne
-- Plusieurs niveaux ou un monde ouvert
-- Progression, inventaire, sauvegarde
-- Support mobile tactile (prévu en V2)
-- Rendu réaliste ou PBR poussé
+- Multijoueur en ligne (netcode, rollback)
+- Plus de 2 personnages jouables
+- Mode histoire, progression, sauvegarde de compte
+- Contrôles tactiles mobiles
+- Armes
 
-## 3. Genre et caméra
+## 3. Modes de jeu
 
-- **Genre :** action / beat'em up en arène, à la 3e personne.
-- **Caméra :** 3e personne, derrière l'épaule et légèrement surélevée, orbitale à la souris, avec lock-on optionnel sur l'ennemi le plus proche.
-- **Vue :** perspective, champ de vision d'environ 60°.
+| Mode | V1 | Description |
+|------|----|-------------|
+| **Joueur vs CPU** | ✅ | Mode principal, avec 3 niveaux de difficulté pour l'IA |
+| **Joueur vs Joueur (local)** | ✅ | 2 manettes, ou clavier contre manette |
+| **Entraînement** | ✅ | Mannequin configurable (immobile, garde, saut), affichage des hitboxes et des frame data |
 
-> Variante possible : un combat 1v1 façon jeu de baston (caméra latérale fixe). À trancher, voir §12.
+## 4. Caméra et espace de jeu
 
-## 4. Contrôles (clavier + souris, manette en bonus)
+- **Gameplay 2.5D :** les combattants se déplacent sur un **plan 2D** (gauche/droite, saut), avec un rendu 3D. Pas de déplacement latéral en V1.
+- **Caméra latérale** qui suit le milieu des deux combattants et zoome selon leur distance (bornes min/max).
+- **Arène :** largeur limitée par des murs invisibles ; être acculé au bord crée de la pression.
+- Les combattants se font **toujours face** (retournement automatique quand l'un passe derrière l'autre).
 
-| Action | Clavier/Souris | Manette (Xbox) |
-|--------|----------------|----------------|
-| Déplacement | ZQSD / WASD | Stick gauche |
-| Caméra | Souris | Stick droit |
-| Attaque légère | Clic gauche | X |
-| Attaque lourde | Clic droit | Y |
-| Esquive (roulade) | Espace | A |
-| Garde / parade | Shift (maintenu) | LB |
-| Lock-on | Tab / clic molette | R3 |
-| Pause | Échap | Start |
+## 5. Contrôles
 
-La disposition AZERTY ou QWERTY est détectée via `KeyboardEvent.code`, qui suit la position physique des touches.
+Les directions sont **relatives au personnage** : « avant » signifie vers l'adversaire, « arrière » s'en éloigner.
 
-## 5. Système de combat
+| Action | Manette (Xbox / PS) | Clavier J1 | Clavier J2 (PvP) |
+|--------|---------------------|------------|------------------|
+| Déplacement | Stick gauche / croix | ZQSD (WASD en QWERTY) | Flèches |
+| Poing léger (LP) | X / □ | U | Pavé num. 4 |
+| Poing lourd (HP) | Y / △ | I | Pavé num. 5 |
+| Pied léger (LK) | A / ✕ | J | Pavé num. 1 |
+| Pied lourd (HK) | B / ○ | K | Pavé num. 2 |
+| Saisie (LP+LK) | RB / R1 | O | Pavé num. 6 |
+| Pause | Start / Options | Échap | — |
 
-### 5.1 Attaques
-- **Combo léger :** 3 coups enchaînés (L1 → L2 → L3) ; le dernier pousse l'ennemi en arrière.
-- **Attaque lourde :** lente, gros dégâts, casse la garde.
-- **Finisher :** léger, léger puis lourd déclenche un coup spécial.
-- Chaque attaque a 3 phases : **startup** (préparation), **active** (hitbox active) et **recovery** (récupération).
-- **Fenêtre d'enchaînement :** pendant la recovery, une entrée bufferisée (environ 200 ms) enchaîne le coup suivant.
+- **Mouvements :**
+  - **Garde :** maintenir arrière (garde haute) ou bas-arrière (garde basse).
+  - **Saut :** haut, en avant, en arrière.
+  - **Accroupi :** bas.
+  - **Dash :** double tap avant (dash) ou arrière (backdash).
+- **Manette :**
+  - API Gamepad avec support du mapping standard (Xbox, PS4/PS5, Switch Pro).
+  - Zone morte configurable ; la croix et le stick sont équivalents.
+  - Écran de remappage des boutons.
+  - Vibration (`vibrationActuator`) sur les coups reçus, si disponible.
+  - Branchement et débranchement à chaud ; la pause est automatique si la manette d'un joueur se déconnecte.
+- **Clavier :** lecture de `KeyboardEvent.code`, donc compatible AZERTY et QWERTY.
 
-### 5.2 Défense
-- **Esquive :** roulade de 0,5 s, avec **i-frames** (invulnérabilité) pendant 0,25 s. Elle peut annuler la recovery d'une attaque.
-- **Garde :** réduit les dégâts de 80 % et consomme de l'endurance.
-- **Parade (bonus) :** une garde déclenchée dans les 150 ms avant l'impact étourdit l'ennemi.
+## 6. Système de combat
 
-### 5.3 Ressources
-- **PV :** 100 pour le joueur.
-- **Endurance :** 100, se régénère après 1 s sans action. L'esquive coûte 25, la garde 10 par coup bloqué, l'attaque lourde 20.
+### 6.1 Fondamentaux (frame data)
+- La logique tourne à **60 frames par seconde, en pas fixe**. Toutes les durées sont exprimées en frames.
+- Chaque coup a trois phases : **startup** (préparation), **active** (hitbox active) et **recovery** (récupération).
+- Chaque coup a aussi un **hitstun** et un **blockstun**, qui déterminent l'avantage ou le désavantage en frames.
+- **Hauteurs de coup :**
 
-### 5.4 Feedback d'impact (le « juice »)
-- **Hit-stop :** gel du jeu de 60 à 120 ms selon la force du coup.
-- **Screen shake :** léger sur les coups normaux, fort sur les lourds et les finishers.
-- **Hit flash :** l'ennemi devient blanc pendant 1 frame.
-- **Knockback :** recul physique de l'ennemi.
-- **Particules :** étincelles ou poussière au point d'impact.
-- **Sons :** whoosh, impact, cri (placeholders libres de droits).
-- **Chiffres de dégâts :** flottants (optionnel, activable).
+  | Type | Bloqué par |
+  |------|------------|
+  | **Haut** | garde haute (passe au-dessus d'un adversaire accroupi) |
+  | **Milieu** | garde haute |
+  | **Bas** | garde basse uniquement |
+  | **Overhead** (coup sauté) | garde haute uniquement |
 
-### 5.5 Hitboxes / hurtboxes
-- **Hurtbox :** capsule autour de chaque personnage.
-- **Hitbox :** sphère attachée à l'os de la main, du pied ou de l'arme, active seulement pendant la phase active.
-- Un même coup ne touche qu'une seule fois la même cible.
-- Mode debug (touche `F1`) pour afficher les hitboxes.
+- **Buffer d'entrées :** 6 frames pour les coups, 10 frames pour les coups spéciaux.
+- **Coups déclarés en données** (fichier JSON/TS par personnage) : frames, dégâts, hauteur, hitbox, knockback, hit-stop. Cela permet d'équilibrer sans toucher au code.
 
-## 6. Ennemis
+### 6.2 Coups normaux
+- 4 boutons × 3 postures (debout, accroupi, sauté), soit **12 coups normaux** par personnage.
+- Quelques coups de commande (ex. avant + HP = overhead).
 
-| Type | PV | Comportement |
-|------|----|--------------|
-| **Mannequin** | ∞ | Ne bouge pas, sert à tester les combos |
-| **Brute** | 60 | S'approche, enchaîne 2 coups, télégraphie ses attaques (flash rouge) |
-| **Rapide** | 35 | Tourne autour du joueur, attaque en dash puis recule |
+### 6.3 Combos
+- **Enchaînements cibles :** LP → LP → HP, LK → HK, etc. (2 à 3 chaînes par personnage).
+- **Cancel :** certains coups normaux peuvent être annulés par un coup spécial pendant le hit ou le block.
+- **Réduction des dégâts :** chaque coup supplémentaire d'un combo fait 10 % de dégâts en moins, avec un minimum de 30 %.
+- **Juggle :** limité, l'adversaire projeté en l'air peut être touché 1 ou 2 fois.
 
-- **IA :** machine à états (idle → poursuite → attaque → récupération → touché → mort).
-- **Gestion de groupe :** au maximum 2 ennemis attaquent en même temps, les autres attendent en cercle (« attack tokens »).
+### 6.4 Coups spéciaux
+Les commandes restent simples et accessibles (pas de 360°) :
 
-## 7. Boucle de jeu
+| Commande | Notation |
+|----------|----------|
+| Quart de cercle avant + poing | ↓↘→ + P |
+| Dragon punch | →↓↘ + P |
+| Quart de cercle arrière + pied | ↓↙← + K |
 
-1. **Écran titre :** « Jouer », « Contrôles ».
-2. **Arène :** 3 vagues (vague 1 : 3 brutes ; vague 2 : 2 brutes et 2 rapides ; vague 3 : 4 brutes et 3 rapides).
-3. **Victoire :** affichage du temps et du nombre de coups, bouton « Rejouer ».
-4. **Défaite :** « Game Over », bouton « Rejouer ».
-5. **Pause :** reprendre, recommencer, contrôles.
+- 3 coups spéciaux par personnage. La version légère ou lourde dépend du bouton utilisé.
 
-## 8. Direction artistique
+### 6.5 Défense
+- **Garde :** les dégâts sont réduits à 0. La jauge de garde (optionnelle V1) casse si elle est trop sollicitée.
+- **Saisie :** imparable, mais l'adversaire peut s'en dégager en appuyant aussi sur saisie dans les 7 premières frames.
+- **Relevé :** après une chute au sol, l'adversaire peut se relever sur place ou rouler en arrière (choix de la direction).
 
-- **Style :** low poly flat shading, palette limitée (environ 16 couleurs), éclairage chaud.
-- **Arène :** circulaire, avec quelques piliers et rochers ; ciel en dégradé et brouillard léger.
-- **Lumière :** 1 lumière directionnelle avec ombres, 1 lumière hémisphérique.
-- **Post-processing (si le budget le permet) :** bloom léger, vignette.
-- **Interface :** barres PV et endurance en haut à gauche, barre PV au-dessus des ennemis, compteur de vague.
+### 6.6 Ressources
+- **PV :** 1000 par round.
+- **Jauge de super :** se remplit en frappant et en encaissant, sur 1 barre. Elle permet de lancer **1 super coup** par personnage (↓↘→↓↘→ + P).
 
-## 9. Assets (gratuits)
+### 6.7 Feedback d'impact (le « juice »)
+- **Hit-stop :** gel des deux combattants pendant 6 à 14 frames selon la force du coup.
+- **Screen shake :** léger sur les coups normaux, fort sur les lourds et les supers.
+- **Hit flash** et **particules** au point d'impact ; effet différent selon que le coup touche ou est bloqué.
+- **Knockback :** recul de l'adversaire, avec pushback quand le coup est bloqué.
+- **Ralenti et zoom caméra** sur le coup final du round (KO).
+- **Sons :** whoosh, impact (léger, lourd, bloqué), voix d'annonce (« Round 1 », « Fight! », « K.O. »).
+- **Vibration manette.**
+- **Compteur de combo** à l'écran (« 4 HITS »).
+
+### 6.8 Hitboxes / hurtboxes
+- **Hurtboxes :** plusieurs boîtes par personnage (tête, torse, jambes), qui suivent l'animation.
+- **Hitboxes :** définies par coup dans les données, ou attachées aux os (poing, pied), actives seulement pendant la phase active.
+- **Pushbox :** empêche les deux personnages de se traverser.
+- Un même coup touche au maximum une fois.
+- **Mode debug** (`F1`) : affiche les boîtes et les frame data en direct.
+
+## 7. Personnages (V1 : 2)
+
+| Personnage | Style | Archétype |
+|------------|-------|-----------|
+| **Kai** | Karaté / kung-fu | Polyvalent : projectile (onde de ki), dragon punch, coups de pied tournoyants |
+| **Brick** | Boxe / lutte | Grappler : coups lourds et lents, saisie de commande, armure sur 1 coup |
+
+Les deux personnages partagent le même squelette, ce qui permet de réutiliser les animations de base. Leur silhouette et leur palette sont différentes.
+
+**Animations par personnage :** idle (pose de garde), marche avant/arrière, dash, saut (3 directions), accroupi, garde (haute/basse), 12 normaux, 3 spéciaux, super, saisie (réussie/dégagée), hitstun (haut/bas/air), chute et relevé, KO, victoire, intro.
+
+## 8. IA (CPU)
+
+- Machine à états avec une prise de décision toutes les N frames.
+- **Facile :** réactions lentes, garde rare, pas de combos.
+- **Moyen :** garde les attaques évidentes, combos simples, quelques anti-airs.
+- **Difficile :** punit les coups dans le vide, varie haut et bas, utilise les spéciaux et la super.
+- L'IA lit uniquement l'état visible du jeu, sans tricher sur les entrées du joueur (sauf temps de réaction réglable).
+
+## 9. Boucle de jeu et interface
+
+1. **Écran titre :** « Appuyez sur Start » (détecte la manette ou le clavier du joueur 1).
+2. **Menu principal :** VS CPU, VS Joueur, Entraînement, Options (contrôles, audio, difficulté).
+3. **Sélection des personnages** pour J1 et J2/CPU.
+4. **Combat :** au meilleur des 3 rounds, chacun limité à 99 s. Si le temps est écoulé, le joueur avec le plus de PV gagne.
+5. **Résultat :** vainqueur, puis « Revanche », « Changer de perso » ou « Menu ».
+6. **Pause :** reprendre, liste des coups, options, quitter.
+
+**Interface en combat :**
+- barres de PV en haut (miroir J1/J2) avec un effet de « dégât récent » rouge ;
+- timer au centre ;
+- indicateurs de rounds gagnés ;
+- jauges de super en bas ;
+- compteur de combo ;
+- annonces « Round / Fight / K.O. ».
+
+## 10. Direction artistique
+
+- **Style :** low poly flat shading, palette limitée, éclairage dramatique.
+- **Arène (V1 : 1) :** dojo sur une colline au coucher de soleil, avec un fond en parallaxe (montagnes, arbres, lanternes).
+- **Lumière :** 1 lumière directionnelle avec ombres, 1 lumière hémisphérique, et une lumière de contour (rim light) pour détacher les persos.
+- **Post-processing :** bloom léger sur les impacts et la super, vignette.
+- **Lisibilité avant tout :** les silhouettes des combattants doivent rester claires sur le fond.
+
+## 11. Assets (gratuits)
 
 | Besoin | Source | Licence |
 |--------|--------|---------|
-| Personnages | Quaternius (Ultimate Modular Characters) / Kenney | CC0 |
-| Animations | Mixamo (retarget) ou packs animés Quaternius | Libre d'utilisation / CC0 |
+| Personnages | Quaternius (Ultimate Modular Characters), Kenney | CC0 |
+| Animations | Mixamo (catégorie *combat / martial arts*), packs Quaternius | Libre d'utilisation / CC0 |
 | Décor | Kenney, Quaternius, Poly Pizza | CC0 / CC-BY |
-| Sons | Kenney Audio, freesound.org | CC0 |
+| Sons et voix | Kenney Audio, freesound.org | CC0 |
 
-- **Format :** glTF binaire (`.glb`), compression Draco ou Meshopt, textures en KTX2 si besoin.
+- **Format :** glTF binaire (`.glb`), compression Meshopt ou Draco.
 - Les crédits sont listés dans `CREDITS.md`.
+- Les animations Mixamo ne peuvent pas être redistribuées seules. Elles doivent être intégrées aux modèles, ce qui est permis.
 
-**Animations requises pour le héros :** idle, marche, course, L1, L2, L3, lourde, finisher, esquive, garde, touché, mort, victoire.
-
-## 10. Stack technique
+## 12. Stack technique
 
 | Domaine | Choix |
 |---------|-------|
-| Langage | TypeScript |
+| Langage | TypeScript (strict) |
 | Build | Vite |
-| Rendu 3D | Three.js (WebGL 2 ; WebGPU plus tard) |
-| Animation | `THREE.AnimationMixer` (crossfade, animations additives) |
-| Physique / collisions | Maison (capsules/sphères) en V1 ; Rapier si besoin |
-| Audio | Web Audio API (via `THREE.Audio` ou Howler.js) |
+| Rendu 3D | Three.js (WebGL 2) |
+| Animation | `THREE.AnimationMixer`, pilotée frame par frame par la logique (déterministe) |
+| Collisions | Maison : boîtes alignées 2D (AABB) sur le plan de combat, pas de moteur physique |
+| Input | Couche d'abstraction clavier + Gamepad API, avec un historique d'entrées pour détecter les commandes |
+| Audio | Web Audio API |
 | Interface | HTML/CSS par-dessus le canvas |
-| Qualité | ESLint + Prettier ; Vitest pour la logique (combat, IA) |
-| Debug | lil-gui (réglages en direct), stats.js |
+| Qualité | ESLint + Prettier, Vitest (détection des commandes, frame data, dégâts) |
+| Debug | lil-gui, stats.js, overlay des hitboxes |
+| CI/CD | GitHub Actions : lint + tests + build, puis déploiement sur **GitHub Pages** |
 
-### Architecture (proposition)
+### Principes d'architecture
+- **Logique et rendu séparés :** la simulation est **déterministe** (pas fixe, sans `Math.random` non seedé) et le rendu se contente d'afficher l'état. Cela prépare un futur rollback netcode en V2+.
+- **Entrées sous forme de bitmask par frame**, ce qui permet de rejouer un combat (replay) à partir des entrées seules.
+
+### Arborescence (proposition)
 
 ```
 V1/
-├─ docs/            # specs, notes de design
-├─ public/assets/   # modèles .glb, sons, textures
+├─ docs/              # specs, notes de design
+├─ public/assets/     # .glb, sons, textures
 ├─ src/
-│  ├─ main.ts       # bootstrap
-│  ├─ core/         # boucle de jeu (fixed timestep), input, temps, events
-│  ├─ render/       # scène, caméra, lumières, post-fx
-│  ├─ entities/     # Player, Enemy, components
-│  ├─ combat/       # attaques (data), hitbox, dégâts, hit-stop
-│  ├─ ai/           # machines à états ennemis, attack tokens
-│  ├─ game/         # vagues, états du jeu (menu/play/pause/end)
-│  ├─ fx/           # particules, screen shake, flash
-│  └─ ui/           # HUD, menus
-└─ tests/
+│  ├─ main.ts
+│  ├─ core/           # boucle à pas fixe, horloge, events, RNG seedée
+│  ├─ input/          # clavier, manette, mapping, buffer, détection des commandes
+│  ├─ sim/            # état du combat, fighters, collisions, frame data, rounds
+│  ├─ characters/     # données par perso (kai.ts, brick.ts)
+│  ├─ ai/             # CPU
+│  ├─ render/         # scène, caméra, lumières, sync anim ↔ sim, post-fx
+│  ├─ fx/             # particules, shake, flash, ralenti
+│  ├─ audio/
+│  └─ ui/             # HUD, menus, sélection, remappage
+├─ tests/
+└─ .github/workflows/ # deploy.yml (GitHub Pages)
 ```
 
-- **Boucle :** logique à pas fixe (60 Hz), rendu interpolé.
-- **Attaques déclarées en données** (frames de startup, active et recovery, dégâts, knockback, hit-stop), ce qui permet de les équilibrer sans toucher au code.
+### Déploiement GitHub Pages
+- `vite.config.ts` : `base: '/<nom-du-repo>/'`.
+- Le workflow `actions/deploy-pages` se lance à chaque push sur `main`.
+- Les assets sont servis en statique, sans backend.
 
-## 11. Jalons
+## 13. Jalons
 
 | Jalon | Contenu | Livrable |
 |-------|---------|----------|
-| **M0 : Socle** | Vite + TS + Three.js, scène, arène placeholder, boucle de jeu | Une scène qui tourne |
-| **M1 : Héros** | Personnage animé, déplacement, caméra 3e personne | On se balade dans l'arène |
-| **M2 : Combat** | Combo, lourde, esquive, garde, hitboxes, mannequin | On frappe le mannequin |
-| **M3 : Juice** | Hit-stop, shake, flash, particules, sons | Ça « tape » |
-| **M4 : Ennemis** | IA brute et rapide, attack tokens, PV et mort | Un vrai combat |
-| **M5 : Boucle** | Vagues, HUD, menus, victoire/défaite | V1 jouable de bout en bout |
-| **M6 : Polish** | Post-fx, équilibrage, perf, build de prod | Version partageable |
+| **M0 : Socle** | Vite + TS + Three.js, boucle à pas fixe, arène placeholder, caméra latérale, workflow GitHub Pages | Une scène en ligne |
+| **M1 : Input** | Clavier + manette, mapping, buffer, détection des commandes (testée) | Écran de test des entrées |
+| **M2 : Mouvement** | Combattant animé, marche, dash, saut, accroupi, face-à-face, pushbox | Deux persos qui bougent |
+| **M3 : Coups** | Normaux, hitbox/hurtbox, hitstun/blockstun, garde haute/basse, saisie, mode entraînement + debug | On se tape dessus |
+| **M4 : Juice** | Hit-stop, shake, particules, sons, vibration, compteur de combo | Ça « tape » |
+| **M5 : Profondeur** | Spéciaux, combos/cancels, super, juggle, 2e personnage | Un vrai jeu de baston |
+| **M6 : CPU** | IA en 3 niveaux | Jouable en solo |
+| **M7 : Boucle** | Menus, sélection, rounds, timer, HUD, résultat, remappage | V1 de bout en bout |
+| **M8 : Polish** | Arène finale, post-fx, équilibrage, perf | Version partageable |
 
-## 12. Questions ouvertes
+## 14. Questions ouvertes
 
-1. **Genre :** beat'em up en arène (par défaut) ou 1v1 façon jeu de baston ?
-2. **Héros :** à mains nues (arts martiaux) ou avec une arme (épée) ?
-3. **Manette :** obligatoire en V1 ou bonus ?
-4. **Hébergement :** GitHub Pages, Netlify ou Vercel (à décider au moment du lien GitHub) ?
+1. Noms et looks définitifs des 2 personnages (Kai et Brick sont des noms provisoires) ?
+2. Jauge de garde en V1 ou plus tard ?
+3. Nom du jeu (et donc du dépôt GitHub, qui apparaît dans l'URL Pages) ?

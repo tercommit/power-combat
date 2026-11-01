@@ -1,6 +1,6 @@
-# V1 : prototype de combat low poly
+# V1 : jeu de combat 1v1 low poly
 
-Jeu d'action 3D low poly jouable dans le navigateur (Three.js + TypeScript + Vite).
+Jeu de combat 1v1 en 3D low poly, à mains nues, jouable dans le navigateur (Three.js + TypeScript + Vite), avec support manette. Hébergé sur GitHub Pages.
 
 - Spécifications : [`docs/SPECS.md`](docs/SPECS.md)
 
