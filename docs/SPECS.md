@@ -1,6 +1,7 @@
-# Spécifications : V1, jeu de combat 1v1 low poly (web)
+# Spécifications : Power Combat (V1), jeu de combat 1v1 low poly (web)
 
-> Statut : **v0.2**. Décisions validées : combat 1v1, à mains nues, support manette, hébergement GitHub Pages.
+> Statut : **v0.3**. Décisions validées : combat 1v1, à mains nues, support manette, hébergement GitHub Pages, jauge de garde en V1.
+> Dépôt : https://github.com/tercommit/power-combat · Site : https://tercommit.github.io/power-combat/
 > Date : 2026-11-01
 
 ## 1. Vision
@@ -112,7 +113,12 @@ Les commandes restent simples et accessibles (pas de 360°) :
 - 3 coups spéciaux par personnage. La version légère ou lourde dépend du bouton utilisé.
 
 ### 6.5 Défense
-- **Garde :** les dégâts sont réduits à 0. La jauge de garde (optionnelle V1) casse si elle est trop sollicitée.
+- **Garde :** les dégâts sont réduits à 0 (pas de dégâts de garde en V1).
+- **Jauge de garde (V1) :**
+  - 100 points ; chaque coup bloqué en consomme selon sa force (léger 8, lourd 15, spécial 20, super 35).
+  - Elle se régénère de 1 point par frame après 60 frames sans bloquer.
+  - **Garde brisée** quand elle tombe à 0 : l'adversaire est étourdi 60 frames, peut être touché sans protection, puis la jauge remonte à 100.
+  - Une barre fine sous la barre de PV clignote quand il reste moins de 25 %.
 - **Saisie :** imparable, mais l'adversaire peut s'en dégager en appuyant aussi sur saisie dans les 7 premières frames.
 - **Relevé :** après une chute au sol, l'adversaire peut se relever sur place ou rouler en arrière (choix de la direction).
 
@@ -169,6 +175,7 @@ Les deux personnages partagent le même squelette, ce qui permet de réutiliser 
 - barres de PV en haut (miroir J1/J2) avec un effet de « dégât récent » rouge ;
 - timer au centre ;
 - indicateurs de rounds gagnés ;
+- jauges de garde sous les PV ;
 - jauges de super en bas ;
 - compteur de combo ;
 - annonces « Round / Fight / K.O. ».
@@ -236,7 +243,7 @@ V1/
 ```
 
 ### Déploiement GitHub Pages
-- `vite.config.ts` : `base: '/<nom-du-repo>/'`.
+- `vite.config.ts` : `base: '/power-combat/'`.
 - Le workflow `actions/deploy-pages` se lance à chaque push sur `main`.
 - Les assets sont servis en statique, sans backend.
 
@@ -256,6 +263,4 @@ V1/
 
 ## 14. Questions ouvertes
 
-1. Noms et looks définitifs des 2 personnages (Kai et Brick sont des noms provisoires) ?
-2. Jauge de garde en V1 ou plus tard ?
-3. Nom du jeu (et donc du dépôt GitHub, qui apparaît dans l'URL Pages) ?
+_Aucune pour l'instant._ Les noms Kai et Brick sont conservés (sans importance pour la V1).

@@ -1,4 +1,4 @@
-# V1 : jeu de combat 1v1 low poly
+# Power Combat (V1)
 
 Jeu de combat 1v1 en 3D low poly, à mains nues, jouable dans le navigateur (Three.js + TypeScript + Vite), avec support manette. Hébergé sur GitHub Pages.
 
