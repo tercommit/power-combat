@@ -66,24 +66,33 @@ const kai: CharacterData = {
   },
 };
 
-/** Brick : boxeur lourd, plus lent mais frappe plus fort et plus loin. */
+/** Brick : boxeur-lutteur, plus lent mais frappe plus fort et plus loin. */
 const brick: CharacterData = {
   id: 'brick',
   name: 'BRICK',
   walkSpeed: 0.038,
   backSpeed: 0.028,
   moves: {
-    lp: { ...kai.moves.lp, name: 'Jab lourd', startup: 4, damage: 45, reach: 1.25 },
+    lp: { ...kai.moves.lp, name: 'Crochet', startup: 4, damage: 45, reach: 1.25 },
     hp: {
       ...kai.moves.hp,
-      name: 'Cross',
+      name: 'Swing',
       startup: 10,
-      damage: 115,
+      damage: 105,
+      height: 'high',
       reach: 1.55,
       knockback: 0.16,
       armor: true,
     },
-    lk: { ...kai.moves.lk, name: 'Kick bas', startup: 7, damage: 60, reach: 1.35 },
+    lk: {
+      ...kai.moves.lk,
+      name: 'Coup de genou',
+      startup: 7,
+      damage: 50,
+      height: 'mid',
+      reach: 1.2,
+      knockback: 0.1,
+    },
     hk: {
       ...kai.moves.hk,
       name: 'Uppercut',

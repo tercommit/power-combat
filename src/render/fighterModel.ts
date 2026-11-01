@@ -5,8 +5,8 @@
  *
  * Le pack ne contient ni coups de pied, ni garde, ni uppercut : ces poses sont
  * construites en orientant les os (« aim ») par-dessus la garde du jab. Les
- * coups de pied font aussi tourner le bassin, avec le pied d'appui maintenu au
- * sol par cinématique inverse (voir kicks.ts).
+ * coups procéduraux font aussi tourner le bassin, avec les pieds d'appui
+ * maintenus au sol par cinématique inverse (voir strikes.ts).
  */
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
@@ -14,7 +14,7 @@ import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.j
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { moveOf } from '../sim/state';
 import type { CharacterId, FighterState, MoveId } from '../sim/types';
-import { KICKS, kickPose, type KickKey, type Vec3 } from './kicks';
+import { SLOTS, STRIKES, strikePose, type Slot, type StrikeDef, type StrikeKey } from './strikes';
 
 const MODEL_URL = `${import.meta.env.BASE_URL}assets/models/fighter.glb`;
 
@@ -56,14 +56,34 @@ const PALETTES: Record<CharacterId, Palette> = {
 const SCALE: Record<CharacterId, number> = { kai: 1, brick: 1.08 };
 
 /**
- * Moments clés des clips de coups de poing (en secondes), mesurés sur les
- * animations : début du geste, bras tendu, fin du maintien, retour en garde.
+ * Coup de poing issu d'un clip du pack, avec ses moments clés (en secondes)
+ * mesurés sur l'animation : début du geste, bras tendu, fin du maintien, retour.
  */
-const CLIP_TIMING: Partial<
-  Record<MoveId, { clip: string; keys: [number, number, number, number] }>
-> = {
-  lp: { clip: 'Punch_Jab', keys: [0, 0.22, 0.3, 0.75] },
-  hp: { clip: 'Punch_Cross', keys: [0.12, 0.25, 0.42, 0.95] },
+interface ClipStrike {
+  clip: string;
+  keys: [number, number, number, number];
+}
+
+/** Chaque personnage a ses propres coups : clips du pack ou coups procéduraux. */
+const MOVESET: Record<CharacterId, Record<MoveId, ClipStrike | StrikeDef>> = {
+  kai: {
+    lp: { clip: 'Punch_Jab', keys: [0, 0.22, 0.3, 0.75] },
+    hp: { clip: 'Punch_Cross', keys: [0.12, 0.25, 0.42, 0.95] },
+    lk: STRIKES.lowKick,
+    hk: STRIKES.roundhouse,
+  },
+  brick: {
+    lp: STRIKES.hook,
+    hp: STRIKES.overhand,
+    lk: STRIKES.knee,
+    hk: STRIKES.uppercut,
+  },
+};
+
+/** Les membres du mannequin sont plus courts que la portée des coups : on avance un peu. */
+const LUNGE: Record<CharacterId, Record<MoveId, number>> = {
+  kai: { lp: 0.15, hp: 0.2, lk: 0.3, hk: 0.35 },
+  brick: { lp: 0.2, hp: 0.3, lk: 0.45, hk: 0.4 },
 };
 
 type Layer = { clip: string; time: number };
@@ -72,11 +92,6 @@ type Layer = { clip: string; time: number };
 type Aim = { bone: string; child: string; dir: [number, number, number] };
 
 const AIMS = {
-  uppercut: [
-    { bone: 'spine_01', child: 'spine_03', dir: [0, 0.95, 0.2] },
-    { bone: 'upperarm_r', child: 'lowerarm_r', dir: [0.15, -0.1, 0.95] },
-    { bone: 'lowerarm_r', child: 'hand_r', dir: [0.05, 0.95, 0.3] },
-  ],
   blockHigh: [
     { bone: 'upperarm_l', child: 'lowerarm_l', dir: [-0.15, -0.2, 0.95] },
     { bone: 'lowerarm_l', child: 'hand_l', dir: [-0.25, 0.95, 0.15] },
@@ -102,11 +117,8 @@ interface Target {
   sway: number;
   /** Pas en avant pendant l'attaque (mètres), purement visuel. */
   lunge: number;
-  kick?: { key: KickKey; weight: number };
+  strike?: { key: StrikeKey; weight: number; planted: StrikeDef['planted'] };
 }
-
-/** Les membres du mannequin sont plus courts que la portée des coups : on avance un peu. */
-const LUNGE: Record<MoveId, number> = { lp: 0.15, hp: 0.2, lk: 0.3, hk: 0.35 };
 
 /** Progression d'une attaque : 0 → 1 pendant la préparation, 1 pendant l'impact, 1 → 0 ensuite. */
 function attackWeight(frame: number, startup: number, active: number, recovery: number): number {
@@ -137,22 +149,15 @@ function targetFor(f: FighterState, time: number): Target {
     case 'attack': {
       const move = moveOf(f)!;
       const { startup: s, active: a, recovery: r } = move;
-      const timing = CLIP_TIMING[f.move!];
+      const def = MOVESET[f.character][f.move!];
       const key = `attack-${f.move}`;
-      const lunge = LUNGE[f.move!] * attackWeight(f.actionFrame, s, a, r);
-      if (timing && !(f.character === 'brick' && f.move === 'hk')) {
-        const t = punchTime(timing.keys, f.actionFrame, s, a, r);
-        return { ...base, key, layers: [{ clip: timing.clip, time: t }], fade: 0.04, lunge };
+      const lunge = LUNGE[f.character][f.move!] * attackWeight(f.actionFrame, s, a, r);
+      if ('clip' in def) {
+        const t = punchTime(def.keys, f.actionFrame, s, a, r);
+        return { ...base, key, layers: [{ clip: def.clip, time: t }], fade: 0.04, lunge };
       }
-      if (f.move === 'lk' || f.move === 'hk') {
-        if (f.character !== 'brick' || f.move === 'lk') {
-          const def = f.move === 'lk' ? KICKS.lowKick : KICKS.roundhouse;
-          const kick = kickPose(def, f.actionFrame, s, a, r);
-          return { ...base, key, layers: GUARD, kick, fade: 0.04, lunge };
-        }
-      }
-      const aimWeight = attackWeight(f.actionFrame, s, a, r);
-      return { ...base, key, layers: GUARD, aims: AIMS.uppercut, aimWeight, fade: 0.04, lunge };
+      const strike = { ...strikePose(def, f.actionFrame, s, a, r), planted: def.planted };
+      return { ...base, key, layers: GUARD, strike, fade: 0.04, lunge };
     }
     case 'walk': {
       const t = time * 1.1 * f.walkDir;
@@ -227,7 +232,8 @@ const _qWorld = new THREE.Quaternion();
 const _qParent = new THREE.Quaternion();
 const _qRoot = new THREE.Quaternion();
 const _euler = new THREE.Euler();
-const _planted = new THREE.Vector3();
+const _plantedL = new THREE.Vector3();
+const _plantedR = new THREE.Vector3();
 const _pole = new THREE.Vector3();
 const _hip = new THREE.Vector3();
 const _knee = new THREE.Vector3();
@@ -339,7 +345,9 @@ export class FighterModel {
 
     // 2. Retouches procédurales (coups de pied, garde, balancement).
     if (target.sway) this.bonesByName.get('spine_02')?.rotateZ(target.sway * 0.3);
-    if (target.kick && target.kick.weight > 0) this.applyKick(target.kick.key, target.kick.weight);
+    if (target.strike && target.strike.weight > 0) {
+      this.applyStrike(target.strike.key, target.strike.weight, target.strike.planted);
+    }
     if (target.aimWeight > 0) {
       this.root.updateMatrixWorld(true);
       for (const aim of target.aims) this.aim(aim, target.aimWeight);
@@ -366,15 +374,16 @@ export class FighterModel {
   }
 
   /**
-   * Coup de pied : rotation et descente du bassin, jambe d'appui recalée sur son
-   * pied (cinématique inverse), puis jambe qui frappe, buste et bras arrière.
+   * Coup procédural : rotation et descente du bassin, jambes d'appui recalées sur
+   * leurs pieds (cinématique inverse), puis orientation des membres qui frappent.
    */
-  private applyKick(key: KickKey, weight: number): void {
+  private applyStrike(key: StrikeKey, weight: number, planted: StrikeDef['planted']): void {
     const bone = (n: string) => this.bonesByName.get(n)!;
     const pelvis = bone('pelvis');
     this.root.updateMatrixWorld(true);
     this.root.getWorldQuaternion(_qRoot);
-    bone('foot_l').getWorldPosition(_planted);
+    bone('foot_l').getWorldPosition(_plantedL);
+    bone('foot_r').getWorldPosition(_plantedR);
 
     // Bassin : inclinaison, puis rotation autour de la verticale (repère du personnage).
     const [pitch, yaw, roll] = key.pelvis;
@@ -388,17 +397,16 @@ export class FighterModel {
     pelvis.position.copy(pelvis.parent!.worldToLocal(_pos));
     pelvis.updateMatrixWorld(true);
 
-    // Jambe d'appui : le pied reste planté, le genou pointe dans l'axe du bassin.
+    // Jambes d'appui : les pieds restent plantés, les genoux dans l'axe du bassin.
     _pole.copy(FORWARD).applyQuaternion(_qRoot).applyQuaternion(pelvisTurn);
-    this.solveLeg('thigh_l', 'calf_l', 'foot_l', _planted, _pole);
+    if (planted.includes('l')) this.solveLeg('thigh_l', 'calf_l', 'foot_l', _plantedL, _pole);
+    if (planted.includes('r')) this.solveLeg('thigh_r', 'calf_r', 'foot_r', _plantedR, _pole);
 
-    const aimDir = (b: string, c: string, dir: Vec3) =>
-      this.aim({ bone: b, child: c, dir }, weight);
-    aimDir('thigh_r', 'calf_r', key.thigh);
-    aimDir('calf_r', 'foot_r', key.calf);
-    aimDir('spine_01', 'spine_03', key.spine);
-    aimDir('upperarm_r', 'lowerarm_r', key.arm);
-    aimDir('lowerarm_r', 'hand_r', key.forearm);
+    // Membres qui frappent (dont le pied tendu dans l'axe du tibia pour les coups de pied).
+    for (const [slot, dir] of Object.entries(key.aims) as [Slot, StrikeKey['aims'][Slot]][]) {
+      const [b, c] = SLOTS[slot];
+      this.aim({ bone: b, child: c, dir: dir! }, weight);
+    }
   }
 
   /** Cinématique inverse à deux os : place le pied sur `target`, genou vers `pole`. */
