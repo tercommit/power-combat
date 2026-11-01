@@ -44,6 +44,7 @@ function createFighter(character: CharacterId, x: number, wins = 0): FighterStat
     move: null,
     moveHit: false,
     blockHeight: 'high',
+    hitHeight: 'mid',
     walkDir: 0,
     comboTaken: 0,
     flash: 0,
@@ -247,6 +248,7 @@ function checkHit(s: SimState, before: SimState['fighters'], attackerIdx: 0 | 1)
   }
   defender.hp = Math.max(0, defender.hp - Math.round(move.damage * scale));
   defender.comboTaken++;
+  defender.hitHeight = move.height;
   defender.action = 'hitstun';
   defender.actionFrame = 0;
   defender.stun = move.hitstun;

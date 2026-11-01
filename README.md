@@ -6,7 +6,7 @@ Jeu de combat 1v1 en 3D low poly, à mains nues, jouable dans le navigateur (Thr
 
 ## Statut
 
-Prototype : **démo CPU vs CPU**. Deux IA (Kai et Brick) s'affrontent en boucle, avec coups, garde, jauge de garde, combos, rounds et HUD. Prochaine étape : M1 (clavier et manette).
+Prototype : **démo CPU vs CPU**. Deux IA (Kai et Brick), modèles riggés animés, s'affrontent en boucle, avec coups, garde, jauge de garde, combos, rounds et HUD. Prochaine étape : M1 (clavier et manette).
 
 ## Développement
 
@@ -16,6 +16,9 @@ npm run dev      # serveur local (http://localhost:5173)
 npm test         # tests unitaires
 npm run lint
 npm run build    # build de production dans dist/
+npm run assets   # régénère public/assets/models/fighter.glb depuis assets-src/
 ```
+
+Le pack source (Universal Animation Library de Quaternius, CC0) n'est pas versionné : place `UAL1_Standard.glb` dans `assets-src/` pour régénérer le modèle. Voir [`CREDITS.md`](CREDITS.md).
 
 Site : https://tercommit.github.io/power-combat/

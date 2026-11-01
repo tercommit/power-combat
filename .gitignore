@@ -11,3 +11,6 @@ coverage/
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# Packs d’assets bruts (voir scripts/build-assets.mjs)
+assets-src/

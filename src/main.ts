@@ -3,7 +3,7 @@ import { CPU_PROFILES, CpuController } from './ai/cpu';
 import { FixedStepAccumulator } from './core/loop';
 import { ScreenShake, Sparks } from './fx/effects';
 import { FightCamera } from './render/camera';
-import { FighterModel } from './render/fighterModel';
+import { FighterModel, loadFighterAssets } from './render/fighterModel';
 import { createScene } from './render/scene';
 import { createInitialState, stepSim } from './sim/state';
 import type { SimEvent, SimState } from './sim/types';
@@ -16,7 +16,7 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.type = THREE.PCFShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 container.appendChild(renderer.domElement);
 
@@ -30,7 +30,13 @@ let previous: SimState = createInitialState();
 let current: SimState = previous;
 const accumulator = new FixedStepAccumulator();
 
-const models = current.fighters.map((f) => new FighterModel(f.character));
+const loading = document.getElementById('loading')!;
+const assets = await loadFighterAssets().catch((err: unknown) => {
+  loading.textContent = 'Impossible de charger les modèles 3D.';
+  throw err;
+});
+loading.remove();
+const models = current.fighters.map((f) => new FighterModel(assets, f.character));
 scene.add(...models.map((m) => m.root));
 const hud = new Hud(document.getElementById('fight-hud')!, current);
 

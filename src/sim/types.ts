@@ -60,6 +60,8 @@ export interface FighterState {
   move: MoveId | null;
   moveHit: boolean;
   blockHeight: 'high' | 'low';
+  /** Hauteur du dernier coup encaissé (choix de l'animation de réaction). */
+  hitHeight: Height;
   walkDir: -1 | 0 | 1;
   /** Nombre de coups encaissés d'affilée (pour la réduction de dégâts). */
   comboTaken: number;
