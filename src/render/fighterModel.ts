@@ -4,7 +4,9 @@
  * simulation (pas de lecture en temps réel) : le rendu illustre, il ne décide pas.
  *
  * Le pack ne contient ni coups de pied, ni garde, ni uppercut : ces poses sont
- * construites en orientant les os (« aim ») par-dessus la garde du jab.
+ * construites en orientant les os (« aim ») par-dessus la garde du jab. Les
+ * coups de pied font aussi tourner le bassin, avec le pied d'appui maintenu au
+ * sol par cinématique inverse (voir kicks.ts).
  */
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
@@ -12,6 +14,7 @@ import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.j
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { moveOf } from '../sim/state';
 import type { CharacterId, FighterState, MoveId } from '../sim/types';
+import { KICKS, kickPose, type KickKey, type Vec3 } from './kicks';
 
 const MODEL_URL = `${import.meta.env.BASE_URL}assets/models/fighter.glb`;
 
@@ -69,16 +72,6 @@ type Layer = { clip: string; time: number };
 type Aim = { bone: string; child: string; dir: [number, number, number] };
 
 const AIMS = {
-  lowKick: [
-    { bone: 'thigh_r', child: 'calf_r', dir: [0.05, -0.55, 0.85] },
-    { bone: 'calf_r', child: 'foot_r', dir: [0.05, -0.45, 0.9] },
-    { bone: 'spine_01', child: 'spine_03', dir: [0, 0.95, -0.25] },
-  ],
-  highKick: [
-    { bone: 'thigh_r', child: 'calf_r', dir: [0.25, 0.45, 0.85] },
-    { bone: 'calf_r', child: 'foot_r', dir: [0.2, 0.55, 0.8] },
-    { bone: 'spine_01', child: 'spine_03', dir: [-0.2, 0.75, -0.6] },
-  ],
   uppercut: [
     { bone: 'spine_01', child: 'spine_03', dir: [0, 0.95, 0.2] },
     { bone: 'upperarm_r', child: 'lowerarm_r', dir: [0.15, -0.1, 0.95] },
@@ -109,6 +102,7 @@ interface Target {
   sway: number;
   /** Pas en avant pendant l'attaque (mètres), purement visuel. */
   lunge: number;
+  kick?: { key: KickKey; weight: number };
 }
 
 /** Les membres du mannequin sont plus courts que la portée des coups : on avance un peu. */
@@ -150,10 +144,15 @@ function targetFor(f: FighterState, time: number): Target {
         const t = punchTime(timing.keys, f.actionFrame, s, a, r);
         return { ...base, key, layers: [{ clip: timing.clip, time: t }], fade: 0.04, lunge };
       }
-      const aims =
-        f.move === 'lk' ? AIMS.lowKick : f.character === 'brick' ? AIMS.uppercut : AIMS.highKick;
+      if (f.move === 'lk' || f.move === 'hk') {
+        if (f.character !== 'brick' || f.move === 'lk') {
+          const def = f.move === 'lk' ? KICKS.lowKick : KICKS.roundhouse;
+          const kick = kickPose(def, f.actionFrame, s, a, r);
+          return { ...base, key, layers: GUARD, kick, fade: 0.04, lunge };
+        }
+      }
       const aimWeight = attackWeight(f.actionFrame, s, a, r);
-      return { ...base, key, layers: GUARD, aims, aimWeight, fade: 0.04, lunge };
+      return { ...base, key, layers: GUARD, aims: AIMS.uppercut, aimWeight, fade: 0.04, lunge };
     }
     case 'walk': {
       const t = time * 1.1 * f.walkDir;
@@ -227,7 +226,15 @@ const _q = new THREE.Quaternion();
 const _qWorld = new THREE.Quaternion();
 const _qParent = new THREE.Quaternion();
 const _qRoot = new THREE.Quaternion();
+const _euler = new THREE.Euler();
+const _planted = new THREE.Vector3();
+const _pole = new THREE.Vector3();
+const _hip = new THREE.Vector3();
+const _knee = new THREE.Vector3();
+const _dir = new THREE.Vector3();
+const _side = new THREE.Vector3();
 const IDENTITY = new THREE.Quaternion();
+const FORWARD = new THREE.Vector3(0, 0, 1);
 
 /** Piste d'animation reliée directement à la propriété d'un os. */
 interface BoundTrack {
@@ -332,6 +339,7 @@ export class FighterModel {
 
     // 2. Retouches procédurales (coups de pied, garde, balancement).
     if (target.sway) this.bonesByName.get('spine_02')?.rotateZ(target.sway * 0.3);
+    if (target.kick && target.kick.weight > 0) this.applyKick(target.kick.key, target.kick.weight);
     if (target.aimWeight > 0) {
       this.root.updateMatrixWorld(true);
       for (const aim of target.aims) this.aim(aim, target.aimWeight);
@@ -357,18 +365,95 @@ export class FighterModel {
     for (const m of this.materials) m.emissive.setScalar(flash);
   }
 
-  /** Oriente un os pour que son segment (os → enfant) pointe dans `dir`. */
+  /**
+   * Coup de pied : rotation et descente du bassin, jambe d'appui recalée sur son
+   * pied (cinématique inverse), puis jambe qui frappe, buste et bras arrière.
+   */
+  private applyKick(key: KickKey, weight: number): void {
+    const bone = (n: string) => this.bonesByName.get(n)!;
+    const pelvis = bone('pelvis');
+    this.root.updateMatrixWorld(true);
+    this.root.getWorldQuaternion(_qRoot);
+    bone('foot_l').getWorldPosition(_planted);
+
+    // Bassin : inclinaison, puis rotation autour de la verticale (repère du personnage).
+    const [pitch, yaw, roll] = key.pelvis;
+    _euler.set(pitch * weight, yaw * weight, roll * weight, 'YZX');
+    _q.setFromEuler(_euler);
+    const pelvisTurn = _qWorld.copy(_qRoot).multiply(_q).multiply(_qParent.copy(_qRoot).invert());
+    pelvis.getWorldQuaternion(_q).premultiply(pelvisTurn);
+    pelvis.parent!.getWorldQuaternion(_qParent);
+    pelvis.quaternion.copy(_qParent.invert().multiply(_q));
+    pelvis.getWorldPosition(_pos).y -= key.drop * weight;
+    pelvis.position.copy(pelvis.parent!.worldToLocal(_pos));
+    pelvis.updateMatrixWorld(true);
+
+    // Jambe d'appui : le pied reste planté, le genou pointe dans l'axe du bassin.
+    _pole.copy(FORWARD).applyQuaternion(_qRoot).applyQuaternion(pelvisTurn);
+    this.solveLeg('thigh_l', 'calf_l', 'foot_l', _planted, _pole);
+
+    const aimDir = (b: string, c: string, dir: Vec3) =>
+      this.aim({ bone: b, child: c, dir }, weight);
+    aimDir('thigh_r', 'calf_r', key.thigh);
+    aimDir('calf_r', 'foot_r', key.calf);
+    aimDir('spine_01', 'spine_03', key.spine);
+    aimDir('upperarm_r', 'lowerarm_r', key.arm);
+    aimDir('lowerarm_r', 'hand_r', key.forearm);
+  }
+
+  /** Cinématique inverse à deux os : place le pied sur `target`, genou vers `pole`. */
+  private solveLeg(
+    thighName: string,
+    calfName: string,
+    footName: string,
+    target: THREE.Vector3,
+    pole: THREE.Vector3,
+  ): void {
+    const thigh = this.bonesByName.get(thighName)!;
+    const calf = this.bonesByName.get(calfName)!;
+    const foot = this.bonesByName.get(footName)!;
+    thigh.getWorldPosition(_hip);
+    calf.getWorldPosition(_knee);
+    const upper = _hip.distanceTo(_knee);
+    const lower = _knee.distanceTo(foot.getWorldPosition(_pos));
+    _dir.subVectors(target, _hip);
+    const dist = THREE.MathUtils.clamp(_dir.length(), 0.01, upper + lower - 1e-4);
+    _dir.normalize();
+    const cosHip = THREE.MathUtils.clamp(
+      (upper * upper + dist * dist - lower * lower) / (2 * upper * dist),
+      -1,
+      1,
+    );
+    _side.copy(pole).addScaledVector(_dir, -pole.dot(_dir)).normalize();
+    _knee
+      .copy(_hip)
+      .addScaledVector(_dir, upper * cosHip)
+      .addScaledVector(_side, upper * Math.sqrt(1 - cosHip * cosHip));
+    this.aimWorld(thigh, calf, _from.subVectors(_knee, _hip).normalize(), 1);
+    calf.getWorldPosition(_knee);
+    this.aimWorld(calf, foot, _from.subVectors(target, _knee).normalize(), 1);
+  }
+
+  /** Oriente un os pour que son segment (os → enfant) pointe dans `dir` (repère du personnage). */
   private aim({ bone: boneName, child: childName, dir }: Aim, weight: number): void {
     const bone = this.bonesByName.get(boneName);
     const child = this.bonesByName.get(childName);
-    if (!bone || !child || !bone.parent) return;
-    _from.copy(child.getWorldPosition(_to)).sub(bone.getWorldPosition(_pos)).normalize();
+    if (!bone || !child) return;
     this.root.getWorldQuaternion(_qRoot);
-    _to
-      .set(...dir)
-      .normalize()
-      .applyQuaternion(_qRoot);
-    _q.setFromUnitVectors(_from, _to);
+    const worldDir = new THREE.Vector3(...dir).normalize().applyQuaternion(_qRoot);
+    this.aimWorld(bone, child, worldDir, weight);
+  }
+
+  /** Même chose avec une direction en coordonnées monde. */
+  private aimWorld(
+    bone: THREE.Bone,
+    child: THREE.Bone,
+    worldDir: THREE.Vector3,
+    weight: number,
+  ): void {
+    if (!bone.parent) return;
+    _to.copy(child.getWorldPosition(_to)).sub(bone.getWorldPosition(_pos)).normalize();
+    _q.setFromUnitVectors(_to, worldDir);
     if (weight < 1) _q.copy(IDENTITY.clone().slerp(_q, weight));
     bone.getWorldQuaternion(_qWorld);
     _qWorld.premultiply(_q);
