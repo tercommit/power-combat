@@ -1,0 +1,100 @@
+import type { CharacterData, CharacterId } from '../sim/types';
+
+/** Kai : karatéka polyvalent, rapide. */
+const kai: CharacterData = {
+  id: 'kai',
+  name: 'KAI',
+  walkSpeed: 0.045,
+  backSpeed: 0.035,
+  moves: {
+    lp: {
+      name: 'Jab',
+      startup: 4,
+      active: 2,
+      recovery: 7,
+      damage: 40,
+      height: 'high',
+      reach: 1.15,
+      hitstun: 15,
+      blockstun: 10,
+      knockback: 0.05,
+      hitstop: 6,
+      guardCost: 8,
+    },
+    hp: {
+      name: 'Direct',
+      startup: 8,
+      active: 3,
+      recovery: 16,
+      damage: 90,
+      height: 'mid',
+      reach: 1.35,
+      hitstun: 20,
+      blockstun: 14,
+      knockback: 0.13,
+      hitstop: 10,
+      guardCost: 15,
+    },
+    lk: {
+      name: 'Low kick',
+      startup: 6,
+      active: 3,
+      recovery: 11,
+      damage: 50,
+      height: 'low',
+      reach: 1.3,
+      hitstun: 16,
+      blockstun: 11,
+      knockback: 0.06,
+      hitstop: 7,
+      guardCost: 8,
+    },
+    hk: {
+      name: 'Coup de pied circulaire',
+      startup: 12,
+      active: 4,
+      recovery: 20,
+      damage: 120,
+      height: 'high',
+      reach: 1.5,
+      hitstun: 24,
+      blockstun: 16,
+      knockback: 0.22,
+      hitstop: 13,
+      guardCost: 15,
+    },
+  },
+};
+
+/** Brick : boxeur lourd, plus lent mais frappe plus fort et plus loin. */
+const brick: CharacterData = {
+  id: 'brick',
+  name: 'BRICK',
+  walkSpeed: 0.038,
+  backSpeed: 0.028,
+  moves: {
+    lp: { ...kai.moves.lp, name: 'Jab lourd', startup: 4, damage: 45, reach: 1.25 },
+    hp: {
+      ...kai.moves.hp,
+      name: 'Cross',
+      startup: 10,
+      damage: 115,
+      reach: 1.55,
+      knockback: 0.16,
+      armor: true,
+    },
+    lk: { ...kai.moves.lk, name: 'Kick bas', startup: 7, damage: 60, reach: 1.35 },
+    hk: {
+      ...kai.moves.hk,
+      name: 'Uppercut',
+      startup: 12,
+      damage: 150,
+      height: 'mid',
+      reach: 1.4,
+      knockback: 0.26,
+      hitstop: 15,
+    },
+  },
+};
+
+export const CHARACTERS: Record<CharacterId, CharacterData> = { kai, brick };

@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import type { FighterState } from '../sim/state';
 
 /** Matériau low poly : facettes visibles, pas de texture. */
 function flat(color: THREE.ColorRepresentation): THREE.MeshStandardMaterial {
@@ -89,27 +88,6 @@ function createArena(): THREE.Group {
   }
 
   return arena;
-}
-
-/** Placeholder de combattant (capsule + tête) en attendant les modèles animés de M2. */
-export function createFighterPlaceholder(color: THREE.ColorRepresentation): THREE.Group {
-  const fighter = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.35, 0.9, 2, 6), flat(color));
-  body.position.y = 0.8;
-  const head = new THREE.Mesh(new THREE.IcosahedronGeometry(0.24, 0), flat('#f1c79b'));
-  head.position.y = 1.65;
-  // Repère d'orientation : le « nez » pointe vers l'avant (+z local).
-  const nose = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.2), flat('#222'));
-  nose.position.set(0, 1.65, 0.24);
-  fighter.add(body, head, nose);
-  fighter.traverse((o) => (o.castShadow = true));
-  return fighter;
-}
-
-/** Positionne un modèle de combattant d'après l'état de simulation. */
-export function placeFighter(model: THREE.Object3D, state: FighterState): void {
-  model.position.set(state.x, state.y, 0);
-  model.rotation.y = state.facing === 1 ? Math.PI / 2 : -Math.PI / 2;
 }
 
 export function createScene(): THREE.Scene {

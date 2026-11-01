@@ -36,3 +36,190 @@ body {
   font-size: 12px;
   opacity: 0.7;
 }
+
+#hud {
+  top: auto;
+  bottom: 12px;
+}
+
+/* --- Interface de combat ------------------------------------------------ */
+
+#fight-hud {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  color: #fff;
+  font-family: system-ui, sans-serif;
+  font-weight: 900;
+  text-shadow: 0 2px 4px #000a;
+}
+
+#fight-hud .bars {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 16px max(16px, 3vw) 0;
+}
+
+#fight-hud .side {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+#fight-hud .side-1 {
+  align-items: flex-end;
+}
+
+#fight-hud .name {
+  font-size: clamp(14px, 2vw, 20px);
+  letter-spacing: 0.1em;
+}
+
+#fight-hud .hp,
+#fight-hud .guard {
+  position: relative;
+  width: 100%;
+  background: #0008;
+  border: 2px solid #fff;
+  border-radius: 3px;
+  overflow: hidden;
+  transform: skewX(-15deg);
+}
+
+#fight-hud .side-1 .hp,
+#fight-hud .side-1 .guard {
+  transform: skewX(15deg);
+}
+
+#fight-hud .hp {
+  height: clamp(14px, 2.4vw, 24px);
+}
+
+#fight-hud .guard {
+  width: 70%;
+  height: 7px;
+  border-width: 1px;
+}
+
+#fight-hud .fill,
+#fight-hud .trail {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+}
+
+#fight-hud .side-1 .fill,
+#fight-hud .side-1 .trail {
+  left: auto;
+  right: 0;
+}
+
+#fight-hud .hp .fill {
+  background: linear-gradient(#ffe46b, #f0a020);
+}
+
+#fight-hud .hp .trail {
+  background: #e3342f;
+}
+
+#fight-hud .guard .fill {
+  background: #6fb6ff;
+}
+
+#fight-hud .guard .fill.low {
+  animation: blink 0.25s steps(2) infinite;
+  background: #ff6f6f;
+}
+
+#fight-hud .pips {
+  display: flex;
+  gap: 6px;
+}
+
+#fight-hud .pips span {
+  width: 12px;
+  height: 12px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #0006;
+}
+
+#fight-hud .pips span.won {
+  background: #ffd23f;
+}
+
+#fight-hud .timer {
+  font-size: clamp(28px, 5vw, 48px);
+  min-width: 2ch;
+  text-align: center;
+  line-height: 1;
+}
+
+#fight-hud .combo {
+  margin-top: 12vh;
+  font-size: clamp(20px, 3.5vw, 36px);
+  color: #ffd23f;
+  font-style: italic;
+}
+
+#fight-hud .combo.pop {
+  animation: pop 0.2s ease-out;
+}
+
+#fight-hud .banner {
+  position: absolute;
+  top: 38%;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: clamp(32px, 7vw, 72px);
+  font-style: italic;
+  letter-spacing: 0.06em;
+  opacity: 0;
+  transform: scale(1.4);
+  transition:
+    opacity 0.15s,
+    transform 0.15s;
+}
+
+#fight-hud .banner.visible {
+  opacity: 1;
+  transform: scale(1);
+}
+
+#fight-hud .banner.big {
+  font-size: clamp(44px, 10vw, 110px);
+  color: #ffd23f;
+  -webkit-text-stroke: 2px #7a2a10;
+}
+
+#fight-hud .banner.small {
+  top: 55%;
+  font-size: clamp(20px, 3.5vw, 36px);
+  color: #9fd8ff;
+}
+
+#fight-hud .mode {
+  position: absolute;
+  bottom: 12px;
+  right: 16px;
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.7;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0.3;
+  }
+}
+
+@keyframes pop {
+  from {
+    transform: scale(1.6);
+  }
+}
