@@ -6,6 +6,11 @@ import type { Mode, ModeContext } from './mode';
 
 const ENTRIES = [
   { hash: 'fight', label: 'Combat IA', hint: 'Kai contre Brick, piloté par l’ordinateur' },
+  {
+    hash: 'farm',
+    label: 'Récolte',
+    hint: 'Couper du bois, casser des pierres, améliorer ses outils',
+  },
   { hash: 'gallery', label: 'Galerie d’animations', hint: 'Voir et inspecter chaque animation' },
 ];
 

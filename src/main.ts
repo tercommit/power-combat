@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { FarmMode } from './modes/farm';
 import { FightMode } from './modes/fight';
 import { GalleryMode } from './modes/gallery';
 import { MenuMode } from './modes/menu';
@@ -41,13 +42,14 @@ const ctx: ModeContext = {
   },
 };
 
-// Routage par l'URL : #fight, #gallery/kai/lk… (vide = menu).
+// Routage par l'URL : #fight, #farm, #gallery/kai/lk… (vide = menu).
 let mode: Mode;
 function route(): void {
   mode?.dispose();
   ui.innerHTML = '';
   const [name, ...rest] = location.hash.replace(/^#/, '').split('/');
   if (name === 'fight') mode = new FightMode(ctx);
+  else if (name === 'farm') mode = new FarmMode(ctx);
   else if (name === 'gallery') mode = new GalleryMode(ctx, rest);
   else mode = new MenuMode(ctx);
 }

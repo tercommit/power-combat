@@ -10,6 +10,7 @@ Prototype jouable dans le navigateur, avec trois écrans :
 
 - **Menu** (`#`)
 - **Combat IA** (`#fight`) : Kai contre Brick, pilotés par l'ordinateur, avec coups, garde, jauge de garde, combos, rounds et HUD.
+- **Récolte** (`#farm`) : on dirige un personnage dans une clairière pour couper du bois et casser de la pierre (ZQSD/flèches, E ou Espace, ou clic sur un arbre/rocher ; manette : stick gauche, A, X/Y). Les ressources repoussent, et elles servent à améliorer la hache et la pioche (touches 1 et 2). Progression sauvegardée dans le navigateur.
 - **Galerie d'animations** (`#gallery/<perso>/<animation>`, ex. `#gallery/kai/hk`) : lecture image par image, vitesse réglable, phases des coups, mannequin cible à la portée du coup. L'identifiant affiché (ex. `kai/hk`) sert à demander une retouche précise.
 
 Prochaine étape : M1 (clavier et manette).
