@@ -11,6 +11,11 @@ const ENTRIES = [
     label: 'Récolte',
     hint: 'Couper du bois, casser des pierres, améliorer ses outils',
   },
+  {
+    hash: 'farm/ia',
+    label: 'Récolte IA',
+    hint: 'Regarder l’ordinateur farmer et améliorer ses outils',
+  },
   { hash: 'gallery', label: 'Galerie d’animations', hint: 'Voir et inspecter chaque animation' },
 ];
 

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
+import { AI, affordableUpgrade, chooseTarget, planFarm } from '../farm/ai';
 import { Chips, NodeView, createSky, createTerrain, createTool } from '../farm/world';
 import {
   FARM,
@@ -26,8 +27,12 @@ const SPEED = 4.2;
 /** Durée d'un coup d'outil et instant de l'impact (s). */
 const SWING = { duration: 0.6, impact: 0.28 };
 const KINDS: ResourceKind[] = ['wood', 'stone'];
+const SPEEDS = [1, 2, 4, 8];
 
-/** Mode récolte : on se promène dans une clairière pour couper du bois et casser de la pierre. */
+/**
+ * Mode récolte : on se promène dans une clairière pour couper du bois et casser
+ * de la pierre. Avec #farm/ia, c'est l'ordinateur qui joue (démo sans sauvegarde).
+ */
 export class FarmMode implements Mode {
   readonly camera: THREE.PerspectiveCamera;
   private readonly farm: FarmState;
@@ -65,8 +70,17 @@ export class FarmMode implements Mode {
     >;
     prompt: HTMLElement;
     floats: HTMLElement;
+    status: HTMLElement | null;
+    clock: HTMLElement | null;
   };
   private readonly raycaster = new THREE.Raycaster();
+
+  // IA.
+  private readonly auto: boolean;
+  private speed = 1;
+  /** Cibles abandonnées (bloquée en chemin) et instant où on peut y revenir. */
+  private readonly avoid = new Map<number, number>();
+  private stuck = { best: Infinity, time: 0 };
 
   private readonly onKeyDown = (e: KeyboardEvent) => {
     this.keys.add(e.code);
@@ -96,14 +110,20 @@ export class FarmMode implements Mode {
     this.camDist = THREE.MathUtils.clamp(this.camDist + e.deltaY * 0.01, 5, 16);
   };
 
-  constructor(private readonly ctx: ModeContext) {
+  constructor(
+    private readonly ctx: ModeContext,
+    args: string[] = [],
+  ) {
     this.camera = new THREE.PerspectiveCamera(50, ctx.aspect(), 0.1, 300);
+    this.auto = args[0] === 'ia';
     this.farm = createFarm(2026);
-    try {
-      const raw = localStorage.getItem(SAVE_KEY);
-      if (raw) applySave(this.farm, JSON.parse(raw));
-    } catch {
-      // Pas de stockage disponible : on repart de zéro.
+    if (!this.auto) {
+      try {
+        const raw = localStorage.getItem(SAVE_KEY);
+        if (raw) applySave(this.farm, JSON.parse(raw));
+      } catch {
+        // Pas de stockage disponible : on repart de zéro.
+      }
     }
 
     this.setupEnvironment();
@@ -128,7 +148,9 @@ export class FarmMode implements Mode {
         mesh.frustumCulled = false;
         const recolor = (m: THREE.Material) => {
           const c = (m as THREE.MeshStandardMaterial).clone();
-          c.color.set(c.name === 'M_Joints' ? '#3a5a8c' : '#c0392b');
+          // Bûcheron rouge pour le joueur, robot bleu et jaune pour l'IA.
+          const [main, joints] = this.auto ? ['#3a7bd5', '#ffd23f'] : ['#c0392b', '#3a5a8c'];
+          c.color.set(c.name === 'M_Joints' ? joints : main);
           c.flatShading = true;
           c.roughness = 0.8;
           c.metalness = 0;
@@ -261,7 +283,16 @@ export class FarmMode implements Mode {
         </div>
         <div class="farm-prompt"></div>
         <div class="farm-floats"></div>
-        <p class="farm-help">ZQSD / flèches : se déplacer · E ou Espace : récolter · clic : aller récolter · glisser : tourner la caméra</p>
+        ${
+          this.auto
+            ? `<div class="farm-panel farm-ai">
+                <div><strong>🤖 IA en action</strong> <span class="farm-clock"></span></div>
+                <small class="farm-status"></small>
+                <div class="farm-speeds">${SPEEDS.map((v) => `<button data-speed="${v}">×${v}</button>`).join('')}</div>
+              </div>
+              <p class="farm-help">L'IA farme et améliore ses outils toute seule · glisser : tourner la caméra · molette : zoom</p>`
+            : `<p class="farm-help">ZQSD / flèches : se déplacer · E ou Espace : récolter · clic : aller récolter · glisser : tourner la caméra</p>`
+        }
       </div>
       <button class="back-button">☰ Menu</button>`;
     ui.querySelector('.back-button')!.addEventListener('click', () => this.ctx.navigate(''));
@@ -280,7 +311,18 @@ export class FarmMode implements Mode {
       ) as FarmMode['hud']['tools'],
       prompt: q('.farm-prompt'),
       floats: q('.farm-floats'),
+      status: ui.querySelector<HTMLElement>('.farm-status'),
+      clock: ui.querySelector<HTMLElement>('.farm-clock'),
     };
+    const speedButtons = [...ui.querySelectorAll<HTMLButtonElement>('[data-speed]')];
+    const selectSpeed = (v: number) => {
+      this.speed = v;
+      speedButtons.forEach((b) => b.classList.toggle('selected', Number(b.dataset.speed) === v));
+    };
+    speedButtons.forEach((b) =>
+      b.addEventListener('click', () => selectSpeed(Number(b.dataset.speed))),
+    );
+    selectSpeed(1);
     for (const k of KINDS) hud.tools[k].button.addEventListener('click', () => this.upgrade(k));
     return hud;
   }
@@ -296,11 +338,12 @@ export class FarmMode implements Mode {
         ? `${cost.wood} ${LABELS.wood.icon} + ${cost.stone} ${LABELS.stone.icon}`
         : 'Niveau maximum';
       t.button.disabled = !cost || !canAfford(this.farm, cost);
-      t.button.hidden = !cost;
+      t.button.hidden = !cost || this.auto;
     }
   }
 
   private save(): void {
+    if (this.auto) return;
     try {
       localStorage.setItem(SAVE_KEY, JSON.stringify(toSave(this.farm)));
     } catch {
@@ -308,7 +351,8 @@ export class FarmMode implements Mode {
     }
   }
 
-  private upgrade(kind: ResourceKind): void {
+  private upgrade(kind: ResourceKind, byAi = false): void {
+    if (this.auto && !byAi) return;
     if (!upgradeTool(this.farm, kind)) return;
     this.floatText(
       `${LABELS[kind].tool} niv. ${this.farm.tools[kind].level} !`,
@@ -322,6 +366,7 @@ export class FarmMode implements Mode {
 
   /** Clic sur l'écran : un arbre ou un rocher devient la cible, sinon on marche jusqu'au point. */
   private pick(clientX: number, clientY: number): void {
+    if (this.auto) return;
     const ndc = new THREE.Vector2(
       (clientX / window.innerWidth) * 2 - 1,
       -(clientY / window.innerHeight) * 2 + 1,
@@ -419,9 +464,51 @@ export class FarmMode implements Mode {
     tick();
   }
 
-  update(now: number, elapsedMs: number): void {
-    const dt = elapsedMs / 1000;
+  /** Décision de l'IA quand elle n'a plus rien à faire : acheter, puis choisir une cible. */
+  private think(dt: number): void {
+    for (const [id, until] of this.avoid) if (this.farm.time >= until) this.avoid.delete(id);
+    if (this.goal?.node) {
+      // Bloquée derrière un obstacle : elle abandonne cette cible pour un moment.
+      const d = Math.hypot(this.goal.x - this.pos.x, this.goal.z - this.pos.y);
+      if (d < this.stuck.best - 0.05) this.stuck = { best: d, time: 0 };
+      else if (this.swingTime < 0 && (this.stuck.time += dt) > AI.stuckSeconds) {
+        this.avoid.set(this.goal.node.id, this.farm.time + AI.avoidSeconds);
+        this.goal = null;
+      }
+    }
+    if (this.goal || this.swingTime >= 0) return;
+    const upgrade = affordableUpgrade(this.farm);
+    if (upgrade) this.upgrade(upgrade, true);
+    const node = chooseTarget(this.farm, this.pos.x, this.pos.y, new Set(this.avoid.keys()));
+    if (node) {
+      this.goal = { node, x: node.x, z: node.z };
+      this.stuck = { best: Infinity, time: 0 };
+    }
+  }
 
+  private updateAiHud(): void {
+    if (!this.hud.status || !this.hud.clock) return;
+    const t = Math.floor(this.farm.time);
+    this.hud.clock.textContent = `⏱ ${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
+    const plan = planFarm(this.farm);
+    const action = this.goal?.node?.kind ?? plan.need;
+    const verb = action === 'wood' ? 'Coupe du bois' : 'Mine de la pierre';
+    this.hud.status.textContent = plan.upgrade
+      ? `${verb} pour : ${LABELS[plan.upgrade].tool} niv. ${this.farm.tools[plan.upgrade].level + 1}`
+      : `${verb} · outils au maximum !`;
+  }
+
+  update(now: number, elapsedMs: number): void {
+    // En accéléré, on découpe en petits pas pour garder collisions et coups fiables.
+    let remaining = (elapsedMs / 1000) * this.speed;
+    while (remaining > 1e-6) {
+      const dt = Math.min(remaining, 1 / 30);
+      remaining -= dt;
+      this.step(now, dt);
+    }
+  }
+
+  private step(now: number, dt: number): void {
     for (const node of tickFarm(this.farm, dt)) this.views.get(node.id)!.respawn();
 
     // --- Entrées ---
@@ -432,8 +519,14 @@ export class FarmMode implements Mode {
     if (this.keys.has('KeyD') || this.keys.has('ArrowRight')) ix += 1;
     if (this.keys.has('KeyW') || this.keys.has('ArrowUp')) iz -= 1;
     if (this.keys.has('KeyS') || this.keys.has('ArrowDown')) iz += 1;
-    const harvestHeld = this.keys.has('KeyE') || this.keys.has('Space') || pad.harvest;
+    let harvestHeld = this.keys.has('KeyE') || this.keys.has('Space') || pad.harvest;
     this.gamepadPrev = pad.pressed;
+    if (this.auto) {
+      ix = iz = 0;
+      harvestHeld = false;
+      this.think(dt);
+      this.updateAiHud();
+    }
 
     // Mouvement relatif à la caméra.
     let move = new THREE.Vector2();
@@ -519,7 +612,7 @@ export class FarmMode implements Mode {
 
     // Indication à l'écran.
     const target = this.goal?.node ?? near;
-    if (target && !this.goal) {
+    if (target && !this.goal && !this.auto) {
       this.hud.prompt.textContent = `E / Espace : ${target.kind === 'wood' ? 'couper' : 'miner'} (${target.hp}/${target.maxHp})`;
       this.hud.prompt.hidden = false;
     } else this.hud.prompt.hidden = true;
